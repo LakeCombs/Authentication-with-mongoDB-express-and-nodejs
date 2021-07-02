@@ -59,6 +59,9 @@ exports.forgotpassword = async (req, res, next) => {
     <p> please go to this link to reset your password</p>
     <a href=${resetUrl} clicktracking=off>${resetUrl}</a>
     `;
+
+    try {
+    } catch (error) {}
   } catch (error) {}
 };
 
