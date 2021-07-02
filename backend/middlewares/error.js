@@ -5,8 +5,6 @@ const errorHandler = (err, req, res, next) => {
 
   error.message = err.message;
 
-  console.log(err);
-
   if (err.code === 1100) {
     const message = `Duplicate Field Value Error`;
     error = new ErrorResponse(message, 400);
