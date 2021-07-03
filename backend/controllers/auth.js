@@ -1,6 +1,8 @@
 const { response } = require("express");
 const User = require("../models/User");
 const ErrorResponse = require("../utils/errorResponse");
+const sendEmail = require("../utils/sendEmail");
+const crypto = require("crypto");
 
 exports.register = async (req, res, next) => {
   const { username, email, password } = req.body;
@@ -61,12 +63,53 @@ exports.forgotpassword = async (req, res, next) => {
     `;
 
     try {
-    } catch (error) {}
-  } catch (error) {}
+      await sendEmail({
+        to: user.email,
+        subject: "Password Reset Reqest",
+        text: message,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: "email sent",
+      });
+    } catch (error) {
+      user.resetPasswordToken = undefined;
+      user.resetPssswordExpire = undefined;
+      await user.save();
+
+      return next(new ErrorResponse("Email could not be sent", 500));
+    }
+  } catch (error) {
+    next(error);
+  }
 };
 
-exports.resetpassword = (req, res, next) => {
-  res.send("resetPassword");
+exports.resetpassword = async (req, res, next) => {
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.resetToken)
+    .digest("hex");
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return next(new ErrorResponse("invalid Reset Token", 400));
+    }
+
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+    res.status(201).json({ success: true, data: "Password reset success" });
+  } catch (error) {
+    next(error);
+  }
 };
 
 const sendToken = (user, statusCode, res) => {
